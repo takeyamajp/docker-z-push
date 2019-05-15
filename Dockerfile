@@ -22,11 +22,35 @@ RUN yum -y install httpd mod_ssl; \
     rm -f /usr/sbin/suexec; \
     yum clean all;
 
+# PHP, z-push
+RUN yum -y install epel-release; \
+    rpm -Uvh http://rpms.famillecollet.com/enterprise/remi-release-7.rpm; \
+    { \
+    echo '[z-push]'; \
+    echo 'name=Z-Push noarch Enterprise Linux 7 - $basearch'; \
+    echo 'baseurl=http://repo.z-hub.io/z-push:/final/RHEL_7'; \
+    echo 'failovermethod=priority'; \
+    echo 'enabled=1'; \
+    echo 'gpgcheck=0'; \
+    } > /etc/yum.repos.d/z-push.repo; \
+    yum -y install --enablerepo=remi,remi-php72 z-push-common z-push-ipc-sharedmemory z-push-config-apache z-push-backend-combined z-push-backend-imap z-push-backend-carddav z-push-backend-caldav; \
+    sed -i 's/^;\(error_log\) .*/\1 = \/dev\/stderr/' /etc/php.ini; \
+
+    yum clean all;
+    
+/etc/z-push/z-push.conf.php
+/etc/z-push/combined.conf.php
+/etc/z-push/imap.conf.php
+/etc/z-push/caldav.conf.php
+/etc/z-push/carddav.conf.php
+
 # entrypoint
 RUN { \
     echo '#!/bin/bash -eu'; \
     echo 'rm -f /etc/localtime'; \
     echo 'ln -fs /usr/share/zoneinfo/${TIMEZONE} /etc/localtime'; \
+    echo 'ESC_TIMEZONE=`echo ${TIMEZONE} | sed "s/\//\\\\\\\\\//g"`'; \
+    echo 'sed -i "s/^;\?\(date\.timezone\) =.*/\1 =${ESC_TIMEZONE}/" /etc/php.ini'; \
     echo 'openssl req -new -key "/cert/key.pem" -subj "/CN=${HOSTNAME}" -out "/cert/csr.pem"'; \
     echo 'openssl x509 -req -days 36500 -in "/cert/csr.pem" -signkey "/cert/key.pem" -out "/cert/cert.pem" &>/dev/null'; \
     echo 'sed -i "s/^\(SSLCertificateFile\) .*/\1 \/cert\/cert.pem/" /etc/httpd/conf.d/ssl.conf'; \
