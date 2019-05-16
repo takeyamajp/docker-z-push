@@ -35,14 +35,10 @@ RUN yum -y install epel-release; \
     } > /etc/yum.repos.d/z-push.repo; \
     yum -y install --enablerepo=remi,remi-php72 z-push-common z-push-ipc-sharedmemory z-push-config-apache z-push-backend-combined z-push-backend-imap z-push-backend-carddav z-push-backend-caldav; \
     sed -i 's/^;\(error_log\) .*/\1 = \/dev\/stderr/' /etc/php.ini; \
-
+    sed -i 's/\(define('\''IPC_PROVIDER'\'', '\''\).*\('\'');\)/\1IpcSharedMemoryProvider\2/' /etc/z-push/z-push.conf.php; \
+    sed -i 's/\(define('\''BACKEND_PROVIDER'\'', '\''\).*\('\'');\)/\1BackendCalDAV\2/' /etc/z-push/z-push.conf.php; \
+    sed -i 's/\(define('\''CALDAV_PATH'\'', '\''\).*\('\'');\)/\1\/%u\/\2/' /etc/z-push/carddav.conf.php; \
     yum clean all;
-    
-/etc/z-push/z-push.conf.php
-/etc/z-push/combined.conf.php
-/etc/z-push/imap.conf.php
-/etc/z-push/caldav.conf.php
-/etc/z-push/carddav.conf.php
 
 # entrypoint
 RUN { \
@@ -51,6 +47,7 @@ RUN { \
     echo 'ln -fs /usr/share/zoneinfo/${TIMEZONE} /etc/localtime'; \
     echo 'ESC_TIMEZONE=`echo ${TIMEZONE} | sed "s/\//\\\\\\\\\//g"`'; \
     echo 'sed -i "s/^;\?\(date\.timezone\) =.*/\1 =${ESC_TIMEZONE}/" /etc/php.ini'; \
+    echo 'sed -i "s/\(define('\''TIMEZONE'\'', '\''\).*\('\'');\)/\1${ESC_TIMEZONE}\2/" /etc/z-push/z-push.conf.php;'; \
     echo 'openssl req -new -key "/cert/key.pem" -subj "/CN=${HOSTNAME}" -out "/cert/csr.pem"'; \
     echo 'openssl x509 -req -days 36500 -in "/cert/csr.pem" -signkey "/cert/key.pem" -out "/cert/cert.pem" &>/dev/null'; \
     echo 'sed -i "s/^\(SSLCertificateFile\) .*/\1 \/cert\/cert.pem/" /etc/httpd/conf.d/ssl.conf'; \
@@ -81,6 +78,7 @@ RUN { \
     echo '  echo "</Location>"'; \
     echo '  } > /etc/httpd/conf.d/requireSsl.conf'; \
     echo 'fi'; \
+    echo 'sed -i "s/\(define('\''CALDAV_SERVER'\'', '\''\).*\('\'');\)/\1${CALDAV_SERVER}\2/" /etc/z-push/carddav.conf.php;'; \
     echo 'exec "$@"'; \
     } > /usr/local/bin/entrypoint.sh; \
     chmod +x /usr/local/bin/entrypoint.sh;
@@ -92,6 +90,8 @@ ENV REQUIRE_SSL true
 
 ENV HTTPD_LOG true
 ENV HTTPD_LOG_LEVEL warn
+
+ENV CALDAV_SERVER caldav.example.com
 
 EXPOSE 80
 EXPOSE 443
