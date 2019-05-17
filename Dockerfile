@@ -37,7 +37,7 @@ RUN yum -y install epel-release; \
     sed -i 's/^;\(error_log\) .*/\1 = \/dev\/stderr/' /etc/php.ini; \
     sed -i 's/\(define('\''IPC_PROVIDER'\'', '\''\).*\('\'');\)/\1IpcSharedMemoryProvider\2/' /etc/z-push/z-push.conf.php; \
     sed -i 's/\(define('\''BACKEND_PROVIDER'\'', '\''\).*\('\'');\)/\1BackendCalDAV\2/' /etc/z-push/z-push.conf.php; \
-    sed -i 's/\(define('\''CALDAV_PATH'\'', '\''\).*\('\'');\)/\1%u\/\2/' /etc/z-push/caldav.conf.php; \
+    sed -i 's/\(define('\''CALDAV_PATH'\'', '\''\).*\('\'');\)/\1/\%u\/\2/' /etc/z-push/caldav.conf.php; \
     yum clean all;
 
 # entrypoint
